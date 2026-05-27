@@ -27,13 +27,6 @@ var (
 	ErrKeyNotFound = errors.New("key not found in JWKS")
 )
 
-// Claims represents the JWT claims extracted from a verified token
-type Claims struct {
-	Subject   string // User ID
-	IssuedAt  time.Time
-	ExpiresAt time.Time
-}
-
 // Verifier verifies JWT tokens using JWKS from the auth service
 type Verifier struct {
 	jwksURL     string
@@ -84,8 +77,8 @@ func NewVerifier(config VerifierConfig) (*Verifier, error) {
 	return v, nil
 }
 
-// VerifyToken verifies a JWT token and returns the claims
-func (v *Verifier) VerifyToken(ctx context.Context, tokenString string) (*Claims, error) {
+// VerifyToken verifies a raw JWT and returns the parsed & verified JWT token.
+func (v *Verifier) VerifyToken(ctx context.Context, tokenString string) (jwt.Token, error) {
 	// Ensure JWKS is up to date
 	if err := v.ensureJWKSFresh(ctx); err != nil {
 		return nil, fmt.Errorf("failed to refresh JWKS: %w", err)
@@ -149,20 +142,7 @@ func (v *Verifier) VerifyToken(ctx context.Context, tokenString string) (*Claims
 		}
 	}
 
-	// Extract claims
-	subject, ok := verified.Subject()
-	if !ok || subject == "" {
-		return nil, fmt.Errorf("%w: missing subject claim", ErrInvalidToken)
-	}
-
-	issuedAt, _ := verified.IssuedAt()
-	expiresAt, _ := verified.Expiration()
-
-	return &Claims{
-		Subject:   subject,
-		IssuedAt:  issuedAt,
-		ExpiresAt: expiresAt,
-	}, nil
+	return verified, nil
 }
 
 // ensureJWKSFresh checks if the JWKS cache needs refreshing

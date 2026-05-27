@@ -174,7 +174,7 @@ func TestVerifier(t *testing.T) {
 		tokenFunc   func() (string, error)
 		wantError   bool
 		errorIs     error
-		checkClaims func(*testing.T, *Claims)
+		checkClaims func(*testing.T, jwt.Token)
 	}{
 		{
 			name: "valid token",
@@ -190,11 +190,13 @@ func TestVerifier(t *testing.T) {
 				return keyPair.signer.SignToken(tok)
 			},
 			wantError: false,
-			checkClaims: func(t *testing.T, claims *Claims) {
-				if claims.Subject != userID {
-					t.Errorf("Expected subject %s, got %s", userID, claims.Subject)
+			checkClaims: func(t *testing.T, claims jwt.Token) {
+				gotSubject, _ := claims.Subject()
+				gotExpiredAt, _ := claims.Expiration()
+				if gotSubject != userID {
+					t.Errorf("Expected subject %s, got %s", userID, gotSubject)
 				}
-				if claims.ExpiresAt.Before(time.Now()) {
+				if gotExpiredAt.Before(time.Now()) {
 					t.Errorf("Token should not be expired yet")
 				}
 			},
